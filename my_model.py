@@ -3,6 +3,7 @@
 ######
 
 # import os
+#from tarfile import REGULAR_TYPES
 import torch
 from torch import nn
 
@@ -148,3 +149,63 @@ class UnSupervisedClassifierSystem(pl.LightningModule):
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
         return optimizer
 
+
+
+
+class SemiSupervisedSystem(pl.LightningModule):
+    def __init__(self, model:nn.Module, lr):
+        super().__init__()
+        self.model=model
+        self.lr = lr
+
+    def forward(self, x):
+        return self.model(x)
+
+    def training_step(self, batch, batch_idx):
+        xs, ys = batch["sup"]
+        xus, yus = batch["unsup"]
+        y_s_hat = self.model(xs)
+        y_us_hat = self.model(xus)
+        
+        ##b = F.softmax(y_hat, dim=1) * F.log_softmax(y_hat, dim=1)
+        # b = F.softmax(y_hat, dim=1) 
+        # penalty = (b.mean(dim=0)**2).mean()
+        # b=b* F.log_softmax(y_hat, dim=1)
+        # b = -1.0 * b.mean()+ 10* penalty
+        gamma =  1
+        reugularization =  -1*gamma * (F.softmax(y_us_hat, dim=1)   * F.log_softmax(y_us_hat, dim=1)   ).mean()
+        loss = nn.CrossEntropyLoss()(y_s_hat.squeeze(), ys)
+        loss_total = loss + reugularization
+        self.log_dict({"train_loss": loss, "train_loss_total": loss_total, "reugularization":reugularization })
+        # self.log("train_loss", b)
+        return loss_total
+
+    def validation_step(self,batch, batch_idx):
+        loss, acc = self._shared_eval_step(batch, batch_idx)
+        metrics = {"val_acc": acc, "val_loss":loss}
+        self.log_dict(metrics)
+        return metrics
+
+    def test_step(self,batch, batch_idx):
+        loss, acc = self._shared_eval_step(batch, batch_idx)
+        metrics = {"test_acc": acc, "test_loss":loss}
+        self.log_dict(metrics)
+        return metrics
+
+    def predict_step(self,batch, batch_idx, dataloader_idx=0):
+        x, y = batch
+        y_hat = self.model(x)
+        return y_hat
+
+    def _shared_eval_step(self, batch, batch_id):
+        x, y = batch
+        y_hat = self.model(x)
+        loss = nn.CrossEntropyLoss()(y_hat.squeeze(), y)
+        acc = accuracy(y_hat, y)
+
+        
+        return loss, acc
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
+        return optimizer

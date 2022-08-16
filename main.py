@@ -8,36 +8,50 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from matplotlib import pyplot as plt
 import pytorch_lightning as pl
 import torch
-from my_model import SupervisedClassifierSystem, UnSupervisedClassifierSystem, ModelFullyConvolutional
+from my_model import SupervisedClassifierSystem, UnSupervisedClassifierSystem, SemiSupervisedSystem , ModelFullyConvolutional
 
+#%%
 dataset = MNIST(os.getcwd(), download=True, train=True, transform=transforms.ToTensor())
 tr_ds, vl_ds = torch.utils.data.random_split(dataset, (50000, 10000))
+tr_sup_ds, tr_unsup_ds = torch.utils.data.random_split(tr_ds, (100, 50000-100))
 
-train_loader = DataLoader(tr_ds, batch_size=64) #, shuffle=True)
-
+train_sup_loader = DataLoader(tr_sup_ds, batch_size=5) #, shuffle=True)
+train_unsup_loader = DataLoader(tr_unsup_ds, batch_size=2450) #, shuffle=True)
 vali_loader = DataLoader(vl_ds, batch_size=64)
 
-
-model = ModelFullyConvolutional()
-supervisedClassifierSystem= SupervisedClassifierSystem(model,lr=1e-5)
-trainer = pl.Trainer(\
-           limit_train_batches=10, limit_val_batches=10 ) #, max_epochs=5)
-# trainer = pl.Trainer(callbacks=[EarlyStopping(monitor="val_loss", mode="min")], \
-#            limit_train_batches=10, limit_val_batches=10 ) #, max_epochs=5)
-#trainer = pl.Trainer(max_epochs=10)
-trainer.fit(model=supervisedClassifierSystem, train_dataloaders=train_loader, val_dataloaders= vali_loader)
-trainer.save_checkpoint("best_model.ckpt")
+#%%
+# model = ModelFullyConvolutional()
+# supervisedClassifierSystem= SupervisedClassifierSystem(model,lr=1e-5)
+# trainer = pl.Trainer(callbacks=[EarlyStopping(monitor="val_loss", mode="min")])
+# trainer.fit(model=supervisedClassifierSystem, train_dataloaders=train_sup_loader, val_dataloaders= vali_loader)
+# trainer.save_checkpoint("best_supervised_model.ckpt")
 
 # %%
 
-# model2 = ModelFullyConvolutional()
-unSupervisedClassifierSystem= UnSupervisedClassifierSystem(model,lr=1e-6)
-# train_loader = DataLoader(tr_ds, batch_size=64) #, shuffle=True)
-# vali_loader = DataLoader(vl_ds, batch_size=64)
+model_semiSup = ModelFullyConvolutional()
+semiSupervisedClassifierSystem= SemiSupervisedSystem(model_semiSup,lr=1e-5)
 
-trainer2 = pl.Trainer(callbacks=[EarlyStopping(monitor="val_loss", mode="min")], \
-           limit_train_batches=80, limit_val_batches=10 ) #, max_epochs=100)
-trainer2.fit(model=unSupervisedClassifierSystem, train_dataloaders=train_loader, val_dataloaders= vali_loader)
+trainer_semisup = pl.Trainer(callbacks=[EarlyStopping(monitor="val_loss", patience=10, mode="min")])
+# trainer_semisup = pl.Trainer(\
+#            limit_train_batches=10, limit_val_batches=10 ) #, max_epochs=5)
+# trainer = pl.Trainer(callbacks=[EarlyStopping(monitor="val_loss", mode="min")], \
+#            limit_train_batches=10, limit_val_batches=10 ) #, max_epochs=5)
+#trainer = pl.Trainer(max_epochs=10)
+trainer_semisup.fit(model=semiSupervisedClassifierSystem, \
+        train_dataloaders={"sup": train_sup_loader, "unsup":train_unsup_loader}, \
+             val_dataloaders= vali_loader)
+# trainer.save_checkpoint("best_model.ckpt")
+trainer_semisup.save_checkpoint("best_semiSupervised_model.ckpt")
+# %%
+
+# # model2 = ModelFullyConvolutional()
+# unSupervisedClassifierSystem= UnSupervisedClassifierSystem(model,lr=1e-6)
+# # train_loader = DataLoader(tr_ds, batch_size=64) #, shuffle=True)
+# # vali_loader = DataLoader(vl_ds, batch_size=64)
+
+# trainer2 = pl.Trainer(callbacks=[EarlyStopping(monitor="val_loss", mode="min")], \
+#            limit_train_batches=80, limit_val_batches=10 ) #, max_epochs=100)
+# trainer2.fit(model=unSupervisedClassifierSystem, train_dataloaders=train_loader, val_dataloaders= vali_loader)
 
 
 
