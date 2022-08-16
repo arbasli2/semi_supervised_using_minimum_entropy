@@ -40,8 +40,17 @@ trainer_semisup = pl.Trainer(callbacks=[EarlyStopping(monitor="val_loss", patien
 trainer_semisup.fit(model=semiSupervisedClassifierSystem, \
         train_dataloaders={"sup": train_sup_loader, "unsup":train_unsup_loader}, \
              val_dataloaders= vali_loader)
-# trainer.save_checkpoint("best_model.ckpt")
 trainer_semisup.save_checkpoint("best_semiSupervised_model.ckpt")
+# %%
+# continue
+model_semiSup = ModelFullyConvolutional()
+trainer_semisup = pl.Trainer()
+semiSupervisedClassifierSystem = SemiSupervisedSystem.load_from_checkpoint(checkpoint_path="best_semiSupervised_model_2300epoch.ckpt",model = model_semiSup, lr=1e-5 )
+trainer_semisup.fit(model=semiSupervisedClassifierSystem, \
+        train_dataloaders={"sup": train_sup_loader, "unsup":train_unsup_loader}, \
+             val_dataloaders= vali_loader)
+trainer_semisup.save_checkpoint("best_semiSupervised_model.ckpt")
+
 # %%
 
 # # model2 = ModelFullyConvolutional()
