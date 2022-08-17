@@ -20,11 +20,11 @@ train_unsup_loader = DataLoader(tr_unsup_ds, batch_size=2450) #, shuffle=True)
 vali_loader = DataLoader(vl_ds, batch_size=64)
 
 #%%
-# model = ModelFullyConvolutional()
-# supervisedClassifierSystem= SupervisedClassifierSystem(model,lr=1e-5)
-# trainer = pl.Trainer(callbacks=[EarlyStopping(monitor="val_loss", mode="min")])
-# trainer.fit(model=supervisedClassifierSystem, train_dataloaders=train_sup_loader, val_dataloaders= vali_loader)
-# trainer.save_checkpoint("best_supervised_model.ckpt")
+model = ModelFullyConvolutional()
+supervisedClassifierSystem= SupervisedClassifierSystem(model,lr=1e-5)
+trainer = pl.Trainer(accelerator="gpu", callbacks=[EarlyStopping(monitor="val_loss", mode="min")])
+trainer.fit(model=supervisedClassifierSystem, train_dataloaders=train_sup_loader, val_dataloaders= vali_loader)
+# trainer.save_checkpoint("best_supervised_model_supervised.ckpt")
 
 # %%
 
